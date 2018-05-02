@@ -1470,23 +1470,7 @@ static int aio_prep_rw(struct kiocb *req, struct iocb *iocb)
 	req->ki_flags = iocb_flags(req->ki_filp);
 	if (iocb->aio_flags & IOCB_FLAG_RESFD)
 		req->ki_flags |= IOCB_EVENTFD;
-	req->ki_hint = ki_hint_validate(file_write_hint(req->ki_filp));
-	if (iocb->aio_flags & IOCB_FLAG_IOPRIO) {
-		/*
-		 * If the IOCB_FLAG_IOPRIO flag of aio_flags is set, then
-		 * aio_reqprio is interpreted as an I/O scheduling
-		 * class and priority.
-		 */
-		ret = ioprio_check_cap(iocb->aio_reqprio);
-		if (ret) {
-			pr_debug("aio ioprio check cap error\n");
-			return -EINVAL;
-		}
-
-		req->ki_ioprio = iocb->aio_reqprio;
-	} else
-		req->ki_ioprio = IOPRIO_PRIO_VALUE(IOPRIO_CLASS_NONE, 0);
-
+	req->ki_hint = file_write_hint(req->ki_filp);
 	ret = kiocb_set_rw_flags(req, iocb->aio_rw_flags);
 	if (unlikely(ret))
 		fput(req->ki_filp);
@@ -1593,17 +1577,17 @@ static ssize_t aio_write(struct kiocb *req, struct iocb *iocb, bool vectored,
 	if (!ret) {
 		/*
 		 * Open-code file_start_write here to grab freeze protection,
-		 * which will be released by another thread in aio_complete().
-		 * Fool lockdep by telling it the lock got released so that it
-		 * doesn't complain about the held lock when we return to
-		 * userspace.
+		 * which will be released by another thread in
+		 * aio_complete_rw().  Fool lockdep by telling it the lock got
+		 * released so that it doesn't complain about the held lock when
+		 * we return to userspace.
 		 */
 		if (S_ISREG(file_inode(file)->i_mode)) {
 			__sb_start_write(file_inode(file)->i_sb, SB_FREEZE_WRITE, true);
 			__sb_writers_release(file_inode(file)->i_sb, SB_FREEZE_WRITE);
 		}
 		req->ki_flags |= IOCB_WRITE;
-		ret = aio_ret(req, call_write_iter(file, req, &iter));
+		ret = aio_rw_ret(req, call_write_iter(file, req, &iter));
 	}
 	kfree(iovec);
 out_fput:
