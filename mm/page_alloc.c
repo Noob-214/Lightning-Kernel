@@ -5803,7 +5803,7 @@ static int zone_batchsize(struct zone *zone)
 	 * The per-cpu-pages pools are set to around 1000th of the
 	 * size of the zone.
 	 */
-	batch = zone->managed_pages / 1024;
+	batch = zone_managed_pages(zone) / 1024;
 	/* But no more than a meg. */
 	if (batch * PAGE_SIZE > 1024 * 1024)
 		batch = (1024 * 1024) / PAGE_SIZE;
@@ -7096,7 +7096,7 @@ void adjust_managed_page_count(struct page *page, long count)
 {
 	spin_lock(&managed_page_count_lock);
 	atomic_long_add(count, &page_zone(page)->managed_pages);
-	totalram_pages_add(count);
+	totalram_pages += count;
 #ifdef CONFIG_HIGHMEM
 	if (PageHighMem(page))
 		totalhigh_pages_add(count);
@@ -7135,9 +7135,9 @@ EXPORT_SYMBOL(free_reserved_area);
 void free_highmem_page(struct page *page)
 {
 	__free_reserved_page(page);
-	totalram_pages_inc();
+	totalram_pages++;
 	atomic_long_inc(&page_zone(page)->managed_pages);
-	totalhigh_pages_inc();
+	totalhigh_pages++;
 }
 #endif
 
@@ -7268,7 +7268,7 @@ static void calculate_totalreserve_pages(void)
 		for (i = 0; i < MAX_NR_ZONES; i++) {
 			struct zone *zone = pgdat->node_zones + i;
 			long max = 0;
-			unsigned long managed_pages = zone->managed_pages;
+			unsigned long managed_pages = zone_managed_pages(zone);
 
 			/* Find valid and maximum lowmem_reserve in the zone */
 			for (j = i; j < MAX_NR_ZONES; j++) {
