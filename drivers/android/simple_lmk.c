@@ -195,10 +195,8 @@ static void scan_and_kill(void)
 		return;
 	}
 
-	/* Minimize the number of victims if we found more pages than needed */
-	if (pages_found > MIN_FREE_PAGES) {
-		/* First round of processing to weed out unneeded victims */
-		nr_to_kill = process_victims(nr_found);
+	/* First round of victim processing to weed out unneeded victims */
+	nr_to_kill = process_victims(nr_found);
 
 		/*
 		 * Try to kill as few of the chosen victims as possible by
@@ -209,12 +207,8 @@ static void scan_and_kill(void)
 		sort(victims, nr_to_kill, sizeof(*victims), victim_cmp,
 		     victim_swap);
 
-		/* Second round of processing to finally select the victims */
-		nr_to_kill = process_victims(nr_to_kill);
-	} else {
-		/* Too few pages found, so all the victims need to be killed */
-		nr_to_kill = nr_found;
-	}
+	/* Second round of victim processing to finally select the victims */
+	nr_to_kill = process_victims(nr_to_kill);
 
 	/* Store the final number of victims for simple_lmk_mm_freed() */
 	write_lock(&mm_free_lock);
